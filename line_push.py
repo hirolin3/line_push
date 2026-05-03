@@ -22,12 +22,54 @@ IMGBB_API_KEY = os.getenv("IMGBB_API_KEY")
 line_bot_api = LineBotApi(LINE_ACCESS_TOKEN)
 
 def generate_stock_image(ticker, is_jp):
-    # シンボルの整形
+    # --- 1. シンボルの整形 (重複防止) ---
     ticker = str(ticker).strip()
     if is_jp:
+        # すでに .T が付いていなければ付与する
         symbol = f"{ticker}.T" if not ticker.endswith(".T") else ticker
     else:
         symbol = ticker
+        
+    print(f"DEBUG: Fetching data for {symbol}") # デバッグログ
+    
+    stock = yf.Ticker(symbol)
+    df = stock.history(period="9mo")
+    
+    # --- 2. データが取得できなかった場合のチェック ---
+    if df.empty:
+        print(f"❌ Error: No data found for {symbol}")
+        return None
+
+    # テクニカル計算
+    df['SMA5'] = df['Close'].rolling(window=5).mean()
+    df = df.tail(80) 
+
+    # --- 3. Indexのエラー対策 (DatetimeIndexであることを確認) ---
+    # IndexをDatetime型に変換してからstrftimeを呼び出す
+    df.index = pd.to_datetime(df.index)
+    date_strings = df.index.strftime('%m/%d')
+
+    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.05, row_heights=[0.7, 0.3])
+    
+    # ローソク足
+    fig.add_trace(go.Candlestick(
+        x=date_strings, 
+        open=df['Open'], high=df['High'], low=df['Low'], close=df['Close'],
+        increasing_line_color='#FF4B4B', decreasing_line_color='#00F0FF',
+        name="株価"
+    ), row=1, col=1)
+    
+    fig.add_trace(go.Scatter(x=date_strings, y=df['SMA5'], line=dict(color='orange', width=2)), row=1, col=1)
+
+    colors = ['#FF4B4B' if r['Open'] < r['Close'] else '#00F0FF' for _, r in df.iterrows()]
+    fig.add_trace(go.Bar(x=date_strings, y=df['Volume'], marker_color=colors), row=2, col=1)
+    
+    fig.update_xaxes(type='category', rangeslider_visible=False)
+    fig.update_layout(template="plotly_dark", width=1000, height=700, margin=dict(l=10, r=10, t=10, b=10))
+    
+    img_path = os.path.join(os.path.dirname(__file__), "line_quiz.png")
+    fig.write_image(img_path, engine="kaleido")
+    return img_path
 
     # --- 💡 レート制限対策: ブラウザになりすます設定 ---
     session = requests.Session()
