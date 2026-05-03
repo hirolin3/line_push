@@ -29,7 +29,7 @@ def generate_stock_image(ticker, is_jp):
         symbol = f"{ticker}.T" # 改めて .T を付ける
     else:
         symbol = ticker
-        
+    
     print(f"DEBUG: Fetching data for {symbol}")
 
     # --- 2. レート制限対策 (User-Agent設定) ---
