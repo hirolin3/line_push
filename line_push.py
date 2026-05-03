@@ -161,9 +161,13 @@ def main():
     with open(os.path.join(BASE_DIR, 'ai_stock_dictionary_rich_225.json'), 'r', encoding='utf-8') as f:
         stocks = json.load(f)
     
-    target = random.choice(stocks)
-    wrongs = random.sample([s for s in stocks if s != target], 3)
-    options = random.sample([target] + wrongs, 4)
+target = random.choice(stocks)
+    img_path = generate_stock_image(target['code'], True)
+    
+    # 画像生成に失敗したらやり直すかスキップ
+    if img_path is None:
+        print("⚠️ 画像生成に失敗したため、処理を中断します。")
+        return
     
     # 1. チャート画像生成 & アップロード
     img_path = generate_stock_image(target['code'], True)
