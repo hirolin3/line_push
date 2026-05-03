@@ -1,3 +1,5 @@
+import requests # 先頭に追加してください
+import time     # 先頭に追加してください
 import os
 import json
 import random
@@ -20,27 +22,40 @@ IMGBB_API_KEY = os.getenv("IMGBB_API_KEY")
 line_bot_api = LineBotApi(LINE_ACCESS_TOKEN)
 
 def generate_stock_image(ticker, is_jp):
-    # --- 1. シンボルの整形 (重複防止) ---
+    # シンボルの整形
     ticker = str(ticker).strip()
     if is_jp:
-        # すでに .T が付いていなければ付与する
         symbol = f"{ticker}.T" if not ticker.endswith(".T") else ticker
     else:
         symbol = ticker
-        
-    print(f"DEBUG: Fetching data for {symbol}") # デバッグログ
-    
-    stock = yf.Ticker(symbol)
-    df = stock.history(period="9mo")
-    
-    # --- 2. データが取得できなかった場合のチェック ---
-    if df.empty:
-        print(f"❌ Error: No data found for {symbol}")
-        return None
 
-    # テクニカル計算
-    df['SMA5'] = df['Close'].rolling(window=5).mean()
-    df = df.tail(80) 
+    # --- 💡 レート制限対策: ブラウザになりすます設定 ---
+    session = requests.Session()
+    session.headers.update({
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    })
+
+    print(f"DEBUG: Fetching data for {symbol}...")
+    
+    df = pd.DataFrame()
+    # 最大3回リトライする
+    for i in range(3):
+        try:
+            # sessionを指定してTickerを呼び出す
+            stock = yf.Ticker(symbol, session=session)
+            df = stock.history(period="9mo")
+            if not df.empty:
+                break
+            print(f"⚠️ 試行 {i+1}回目: データが空です。少し待機します。")
+        except Exception as e:
+            print(f"⚠️ 試行 {i+1}回目: エラーが発生しました ({e})")
+        
+        # 失敗したら10秒待って再試行
+        time.sleep(10)
+
+    if df.empty:
+        print(f"❌ 3回試行しましたが、{symbol} のデータを取得できませんでした。")
+        return None
 
     # --- 3. Indexのエラー対策 (DatetimeIndexであることを確認) ---
     # IndexをDatetime型に変換してからstrftimeを呼び出す
