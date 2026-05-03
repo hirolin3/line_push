@@ -1,0 +1,6 @@
+　pandas
+yfinance
+plotly
+kaleido==0.2.1
+line-bot-sdk
+imgbbpy
