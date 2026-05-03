@@ -52,8 +52,21 @@ def generate_stock_image(ticker, is_jp):
     return img_path
 
 def main():
-    # 225銘柄からランダム選出
-    with open('ai_stock_dictionary_rich_225.json', 'r', encoding='utf-8') as f:
+# --- 【修正ポイント】ファイルパスを「絶対パス」にする ---
+    # このスクリプト(line_push.py)がある場所のフォルダパスを取得
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    # そのフォルダ内にある JSON ファイルを指定
+    json_path = os.path.join(BASE_DIR, 'ai_stock_dictionary_rich_225.json')
+
+    # パスが正しいかデバッグ用に表示（ログに出ます）
+    print(f"Loading JSON from: {json_path}")
+
+    # 読み込み
+    if not os.path.exists(json_path):
+        print(f"❌ エラー: ファイルが見つかりません -> {json_path}")
+        return
+
+    with open(json_path, 'r', encoding='utf-8') as f:
         stocks = json.load(f)
     target = random.choice(stocks)
     
