@@ -52,22 +52,24 @@ def generate_stock_image(ticker, is_jp):
     return img_path
 
 def main():
-# --- 【修正ポイント】ファイルパスを「絶対パス」にする ---
-    # このスクリプト(line_push.py)がある場所のフォルダパスを取得
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    # そのフォルダ内にある JSON ファイルを指定
-    json_path = os.path.join(BASE_DIR, 'ai_stock_dictionary_rich_225.json')
+    # --- 修正: プログラム自身の場所を基準にファイルを探す ---
+    # このスクリプトがあるディレクトリを取得
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    json_path = os.path.join(current_dir, 'ai_stock_dictionary_rich_225.json')
 
-    # パスが正しいかデバッグ用に表示（ログに出ます）
-    print(f"Loading JSON from: {json_path}")
+    # 【デバッグ用】もしエラーになった場合に備えて、今見えているファイルを表示
+    print(f"Current working directory: {os.getcwd()}")
+    print(f"Files in current directory: {os.listdir(current_dir)}")
+    print(f"Attempting to open: {json_path}")
 
-    # 読み込み
-    if not os.path.exists(json_path):
-        print(f"❌ エラー: ファイルが見つかりません -> {json_path}")
+    # ファイルの読み込み
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            stocks = json.load(f)
+    except FileNotFoundError:
+        print(f"❌ まだ見つかりません。パスを確認してください: {json_path}")
         return
-
-    with open(json_path, 'r', encoding='utf-8') as f:
-        stocks = json.load(f)
+        
     target = random.choice(stocks)
     
     # 画像生成 & アップロード
